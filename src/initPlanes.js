@@ -5,8 +5,8 @@
 const mainPlane = {
   x: 936,
   y: 144,
-  w: 520,
-  h: 676,
+  width: 520,
+  height: 676,
   points: {
     hori: 18,
     vert: 14
@@ -21,8 +21,8 @@ const mainPlane = {
 function initPlanes() {
   const planes = [];
   // The total space the plane occupies. Includes margin
-  const spaceX = mainPlane.w + mainPlane.margin.x;
-  const spaceY = mainPlane.h + mainPlane.margin.x;
+  const spaceX = mainPlane.width + mainPlane.margin.x;
+  const spaceY = mainPlane.height + mainPlane.margin.x;
 
   // Since we are going to add all the planes in a single array.
   // We need to keep track of the index
@@ -35,8 +35,8 @@ function initPlanes() {
     planes[index] = {
       x: rightColX,
       y: rightColY + spaceY * offsetY,
-      w: mainPlane.w,
-      h: mainPlane.h,
+      width: mainPlane.width,
+      height: mainPlane.height,
       points: mainPlane.points
     };
     index++;
@@ -49,8 +49,8 @@ function initPlanes() {
     planes[index] = {
       x: middleColX,
       y: middleColY + spaceY * offsetY,
-      w: mainPlane.w,
-      h: mainPlane.h,
+      width: mainPlane.width,
+      height: mainPlane.height,
       points: mainPlane.points
     };
     index++;
@@ -67,8 +67,8 @@ function initPlanes() {
     planes[index] = {
       x: leftColX,
       y: leftColY + spaceY * offsetY,
-      w: mainPlane.w,
-      h: mainPlane.h,
+      width: mainPlane.width,
+      height: mainPlane.height,
       points: mainPlane.points
     };
     index++;

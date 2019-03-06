@@ -9,6 +9,8 @@ function InfiniteScroll() {
   const { planes, spaceY } = initPlanes();
   this.planes = planes;
   this.spaceY = spaceY;
+
+  this.drawPlane = this.drawPlane.bind(this);
 }
 InfiniteScroll.prototype.mount = function(container) {
   this.GL.mount(container);
