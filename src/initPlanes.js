@@ -18,7 +18,7 @@ const mainPlane = {
   }
 };
 
-function initPlanes(nImages) {
+function initPlanes() {
   const planes = [];
   // The total space the plane occupies. Includes margin
   const spaceX = mainPlane.w + mainPlane.margin.x;
