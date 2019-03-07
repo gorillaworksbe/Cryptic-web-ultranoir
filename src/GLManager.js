@@ -80,12 +80,14 @@ GLManager.prototype.drawPlane = function({ plane }) {
   geometry.translate(planeGL.x, -planeGL.y, 0);
 
   var material = new THREE.MeshBasicMaterial({
-    color: 0xff0000,
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.1,
     side: THREE.DoubleSide
   });
   const mesh = new THREE.Mesh(geometry, material);
   // Important
-  mesh.drawMode = THREE.TriangleStripDrawMode;
+  // mesh.drawMode = THREE.TriangleStripDrawMode;
   this.scene.add(mesh);
 
   // DELETE LATER
