@@ -1,9 +1,9 @@
 import * as THREE from "three";
-import { getVertices } from "./getVertices";
+import { vertex, fragment } from "./shaders";
 
 function GLManager(container) {
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 10000);
-  camera.position.z = 5;
+  camera.position.z = 1;
 
   const scene = new THREE.Scene();
   camera.lookAt = scene.position;
@@ -17,82 +17,82 @@ function GLManager(container) {
   this.camera = camera;
   this.scene = scene;
   this.renderer = renderer;
+  this.meshes = [];
 }
 GLManager.prototype.mount = function(container) {
   container.appendChild(this.renderer.domElement);
 };
-GLManager.prototype.drawPlane = function({ plane }) {
-  // temporal
-  const fixBy = (n, i = 3) => parseFloat(n.toFixed(i));
-  const getWinGL = () => {
-    const i = (45 * Math.PI) / 180;
-    return fixBy(2 * Math.tan(i / 2) * 5, 5);
-  };
-  const windowSize = {
-    w: window.innerWidth,
-    h: window.innerHeight
-  };
+GLManager.prototype.getSceneSize = function() {
+  const fovInRadians = (this.camera.fov * Math.PI) / 180;
+  return 2 * Math.tan(fovInRadians / 2) * this.camera.position.z;
+};
+GLManager.prototype.updatePlane = function({ index, scroll }) {
+  const scrollDifference = scroll - this.meshes[index].geometry.userData.scroll;
+  this.meshes[index].geometry.userData = { scroll };
+  this.meshes[index].geometry.translate(0, scrollDifference, 0);
+  this.meshes[index].geometry.computeBoundingSphere();
+};
+GLManager.prototype.drawPlane = function({
+  x,
+  width,
+  y,
+  height,
+  points,
+  index,
+  scroll
+}) {
+  const sceneSize = this.getSceneSize();
 
-  const psd = {
-    w: 1680,
-    h: 992
-  };
-  const winWpsdW = windowSize.w / psd.w;
-  const winHpsdH = windowSize.h / psd.h;
+  const winToSceneWidthFactor = sceneSize / window.innerWidth;
+  const winToSceneHeightFactor = sceneSize / window.innerHeight;
 
-  const winGL = getWinGL();
-  const winGLwinW = winGL / windowSize.w;
-  // good
-  const winGLwinH = winGL / windowSize.h;
+  const sceneScroll = scroll * winToSceneHeightFactor;
 
-  // const winHpsdH = 0;
-  // const winWpsdW = 0;
-  // const winGLwinH = 0;
-  // const winGLwinW = 0;
-  // const winGL = 0;
+  if (this.meshes[index]) {
+    this.updatePlane({
+      scroll: sceneScroll,
+      index
+    });
+    return;
+  }
 
-  const planeScreen = {
-    x: plane.x * winWpsdW,
-    width: plane.width * winWpsdW,
-    y: plane.y * winHpsdH,
-    height: plane.height * winHpsdH
-  };
-  const planeGL = {
-    x: planeScreen.x * winGLwinW,
-    width: planeScreen.width * winGLwinW,
-    y: planeScreen.y * winGLwinH,
-    height: planeScreen.height * winGLwinH
+  const planeScene = {
+    x: x * winToSceneWidthFactor,
+    width: width * winToSceneWidthFactor,
+    y: y * winToSceneHeightFactor,
+    height: height * winToSceneHeightFactor
   };
 
   var geometry = new THREE.PlaneBufferGeometry(
-    planeGL.width,
-    planeGL.height,
-    plane.points.hori,
-    plane.points.vert
+    planeScene.width,
+    planeScene.height,
+    points.hori,
+    points.vert
   );
 
+  // The geometry starts at the center of the screen.
+  // Our coordinates start at the top left
+  // Lets move the geometry to the top left
   geometry.translate(
-    -winGL / 2 + planeGL.width / 2,
-    +winGL / 2 - planeGL.height / 2,
+    -sceneSize / 2 + planeScene.width / 2,
+    +sceneSize / 2 - planeScene.height / 2,
     0
   );
-  // Move to its position
-  geometry.translate(planeGL.x, -planeGL.y, 0);
+  // And use our coordinates to move it into place
+  geometry.translate(planeScene.x, -planeScene.y, 0);
+
+  //  Apply the scroll
+  geometry.translate(0, sceneScroll, 0);
+
+  geometry.userData = { scroll: sceneScroll };
 
   var material = new THREE.MeshBasicMaterial({
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.1,
-    side: THREE.DoubleSide
+    color: 0x999999
   });
   const mesh = new THREE.Mesh(geometry, material);
-  // Important
-  // mesh.drawMode = THREE.TriangleStripDrawMode;
   this.scene.add(mesh);
 
-  // DELETE LATER
-  // Something used to be here, but I don't remember what it was.
-  // Hopefully everyone else deleted this too, because it will cause bugs
+  this.meshes[index] = mesh;
 };
 GLManager.prototype.render = function() {
   if (!this.renderer) {

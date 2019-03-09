@@ -37,7 +37,8 @@ function initPlanes() {
       y: rightColY + spaceY * offsetY,
       width: mainPlane.width,
       height: mainPlane.height,
-      points: mainPlane.points
+      points: mainPlane.points,
+      direction: 1
     };
     index++;
   }
@@ -51,7 +52,8 @@ function initPlanes() {
       y: middleColY + spaceY * offsetY,
       width: mainPlane.width,
       height: mainPlane.height,
-      points: mainPlane.points
+      points: mainPlane.points,
+      direction: -1
     };
     index++;
   }
@@ -69,7 +71,8 @@ function initPlanes() {
       y: leftColY + spaceY * offsetY,
       width: mainPlane.width,
       height: mainPlane.height,
-      points: mainPlane.points
+      points: mainPlane.points,
+      direction: 1
     };
     index++;
   }
