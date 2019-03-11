@@ -1,14 +1,27 @@
 import { GLManager } from "./GLManager";
 import { initPlanes } from "./initPlanes";
 // import {initPlanes} from "./initPlanes"
+
+const psd = {
+  width: 1680,
+  height: 992
+};
+function getPsdToWinWidthFactor() {
+  return window.innerWidth / psd.width;
+}
+
+function getPsdToWinHeightFactor() {
+  return window.innerHeight / psd.height;
+}
 function InfiniteScroll() {
   this.GL = new GLManager(this.container);
   // The planes are only dependent on the length of the images
   // Thus, we can initialize it on the constructor. And recreate them
   // only when the ammount of images change
   const { planes, spaceY } = initPlanes();
+
   this.planes = planes;
-  this.spaceY = spaceY;
+  this.spaceY = spaceY * getPsdToWinHeightFactor();
 
   this.drawPlane = this.drawPlane.bind(this);
   this.isMouseDown = false;
@@ -20,7 +33,9 @@ function InfiniteScroll() {
     target: 0,
     // And this ones will be used for that calculation
     start: 0,
-    sensitivity: 4
+    sensitivity: 4,
+    raw: 0,
+    delta: 0
   };
   this.updateRAF = null;
   this.update = this.update.bind(this);
@@ -35,12 +50,9 @@ InfiniteScroll.prototype.draw = function() {
 };
 InfiniteScroll.prototype.drawPlane = function(plane, index) {
   // Convert planes to screen proportions
-  const psd = {
-    width: 1680,
-    height: 992
-  };
-  const psdToWinWidthFactor = window.innerWidth / psd.width;
-  const psdToWinHeightFactor = window.innerHeight / psd.height;
+
+  const psdToWinWidthFactor = getPsdToWinWidthFactor();
+  const psdToWinHeightFactor = getPsdToWinHeightFactor();
 
   // Using Width Factor
   const x = plane.x * psdToWinWidthFactor;
@@ -67,14 +79,24 @@ InfiniteScroll.prototype.onResize = function() {
 };
 InfiniteScroll.prototype.onMouseDown = function(scroll) {
   this.scroll.start = scroll;
-  this.scroll.posY = scroll;
+  this.scroll.raw = scroll;
   this.isMouseDown = true;
+};
+InfiniteScroll.prototype.jumpBack = function() {
+  this.scroll.start = this.scroll.raw;
+  this.scroll.target = this.scroll.target - this.spaceY * this.scroll.delta;
+  this.scroll.current = this.scroll.current - this.spaceY * this.scroll.delta;
 };
 InfiniteScroll.prototype.onMouseMove = function(scroll) {
   if (!this.isMouseDown) return;
   // Just restart them
-  this.scroll.posY = scroll;
+  this.scroll.delta = Math.sign(this.scroll.raw - scroll);
+  this.scroll.raw = scroll;
   this.scroll.target = -(scroll - this.scroll.start) * this.scroll.sensitivity;
+
+  if (Math.abs(this.scroll.target) > this.spaceY) {
+    this.jumpBack();
+  }
 
   if (this.scroll.target !== this.scroll.current) {
     this.scroll.needsUpdate = true;
@@ -86,7 +108,29 @@ InfiniteScroll.prototype.onMouseUp = function() {
   // Just restart them
   // this.scroll.start = 0;
   // this.scroll.posY = 0;
-  this.scroll.target = 0;
+
+  if (this.scroll.delta === 1 && this.scroll.target > this.spaceY / 2) {
+    // If the closest plane is plane 1(the plane over our main plane).
+    // Set scroll.target
+    // jumpBack will substract spaceY
+    // Finally, making scroll.target to 0
+    // And making scroll.current to 1 block backwards
+    this.scroll.target = this.spaceY;
+    this.jumpBack();
+  } else if (
+    this.scroll.delta === -1 &&
+    this.scroll.target < -this.spaceY / 2
+  ) {
+    // If the closest plane is plane 3(the plane under our main plane).
+    // Set negative scroll.target
+    // jumpBack will add spaceY
+    // Finally, making scroll.target to 0
+    // And making scroll.current to 1 block backwards
+    this.scroll.target = -this.spaceY;
+    this.jumpBack();
+  } else {
+    this.scroll.target = 0;
+  }
   this.isMouseDown = false;
   if (this.scroll.target !== this.scroll.current) {
     this.scroll.needsUpdate = true;
@@ -114,14 +158,18 @@ InfiniteScroll.prototype.scheduleUpdate = function() {
 
 InfiniteScroll.prototype.update = function() {
   let didUpdate = false;
-  for (var i = 0; i < this.updator.length; i++) {
-    if (this.updator[i][0].needsUpdate) {
-      didUpdate = true;
-      // Run update function
-      this.updator[i][1]();
-    }
-  }
+  // for (var i = 0; i < this.updator.length; i++) {
+  //   if (this.updator[i][0].needsUpdate) {
+  //     didUpdate = true;
+  //     // Run update function
+  //     this.updator[i][1]();
+  //   }
+  // }
 
+  if (this.scroll.needsUpdate) {
+    didUpdate = true;
+    this.updateScroll();
+  }
   this.draw();
   this.render();
 
