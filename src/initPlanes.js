@@ -18,7 +18,7 @@ const mainPlane = {
   }
 };
 
-function initPlanes() {
+function initPlanes(imageLength) {
   const planes = [];
   // The total space the plane occupies. Includes margin
   const spaceX = mainPlane.width + mainPlane.margin.x;
@@ -32,13 +32,17 @@ function initPlanes() {
   const rightColY = mainPlane.y;
   for (var i = 0; i < 5; i++) {
     let offsetY = i - 2;
+    // This makes sure the center plane starts with the first image
+    // And the planes behind the main plane start with the last image
+    let imgNo = offsetY < 0 ? imageLength + offsetY : offsetY;
     planes[index] = {
       x: rightColX,
       y: rightColY + spaceY * offsetY,
       width: mainPlane.width,
       height: mainPlane.height,
       points: mainPlane.points,
-      direction: 1
+      direction: 1,
+      imgNo
     };
     index++;
   }
@@ -47,13 +51,16 @@ function initPlanes() {
   let middleColY = -350 + mainPlane.y;
   for (var j = 0; j < 4; j++) {
     let offsetY = j - 1;
+    // In the center column we just want a different offset. It doesn't matter
+    let imgNo = 4 - j;
     planes[index] = {
       x: middleColX,
       y: middleColY + spaceY * offsetY,
       width: mainPlane.width,
       height: mainPlane.height,
       points: mainPlane.points,
-      direction: -1
+      direction: -1,
+      imgNo
     };
     index++;
   }
@@ -66,13 +73,18 @@ function initPlanes() {
     // basically offsetY
     let offsetY = k - 2;
 
+    // In the left column we just want to make it slightly different from the main plane
+    let imageOffset = offsetY - 1;
+    let imgNo = imageOffset < 0 ? imageLength + imageOffset : imageOffset;
+
     planes[index] = {
       x: leftColX,
       y: leftColY + spaceY * offsetY,
       width: mainPlane.width,
       height: mainPlane.height,
       points: mainPlane.points,
-      direction: 1
+      direction: 1,
+      imgNo
     };
     index++;
   }

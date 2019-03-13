@@ -13,12 +13,23 @@ function getPsdToWinWidthFactor() {
 function getPsdToWinHeightFactor() {
   return window.innerHeight / psd.height;
 }
-function InfiniteScroll() {
-  this.GL = new GLManager(this.container);
+
+function InfiniteScroll(images = []) {
+  this.GL = new GLManager(this.container, images);
   // The planes are only dependent on the length of the images
   // Thus, we can initialize it on the constructor. And recreate them
   // only when the ammount of images change
-  const { planes, spaceY } = initPlanes();
+  const { planes, spaceY } = initPlanes(images.length);
+
+  // Right now the imgNo's are normalized to the ammount of planes on each column
+  // This loops makes that into the ammount of images
+  for (let index = 0; index < images.length; index++) {
+    const imgNo = planes[index].imgNo;
+    planes[index].imgNo =
+      imgNo > images.length - 1 ? imgNo - images.length : imgNo;
+  }
+
+  this.images = images;
 
   this.planes = planes;
   this.spaceY = spaceY * getPsdToWinHeightFactor();
@@ -68,6 +79,7 @@ InfiniteScroll.prototype.drawPlane = function(plane, index) {
     height,
     scroll: this.scroll.current * plane.direction,
     points: plane.points,
+    imgNo: plane.imgNo,
     index
   });
 };
