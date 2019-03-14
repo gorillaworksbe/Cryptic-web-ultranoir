@@ -19,14 +19,20 @@ function InfiniteScroll(images = []) {
   // The planes are only dependent on the length of the images
   // Thus, we can initialize it on the constructor. And recreate them
   // only when the ammount of images change
-  const { planes, spaceY } = initPlanes(images.length);
+  const { planes, spaceY } = initPlanes();
 
   // Right now the imgNo's are normalized to the ammount of planes on each column
   // This loops makes that into the ammount of images
-  for (let index = 0; index < images.length; index++) {
+  for (let index = 0; index < planes.length; index++) {
     const imgNo = planes[index].imgNo;
-    planes[index].imgNo =
-      imgNo > images.length - 1 ? imgNo - images.length : imgNo;
+    if (imgNo >= 0) {
+      planes[index].imgNo =
+        imgNo > images.length - 1 ? imgNo - images.length : imgNo;
+    } else {
+      planes[index].imgNo = images.length + imgNo;
+    }
+    // planes[index].imgNo =
+    //   imgNo > images.length - 1 ? imgNo - images.length : imgNo;
   }
 
   this.images = images;

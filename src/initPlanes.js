@@ -18,11 +18,11 @@ const mainPlane = {
   }
 };
 
-function initPlanes(imageLength) {
+function initPlanes() {
   const planes = [];
   // The total space the plane occupies. Includes margin
   const spaceX = mainPlane.width + mainPlane.margin.x;
-  const spaceY = mainPlane.height + mainPlane.margin.x;
+  const spaceY = mainPlane.height + mainPlane.margin.y;
 
   // Since we are going to add all the planes in a single array.
   // We need to keep track of the index
@@ -34,7 +34,7 @@ function initPlanes(imageLength) {
     let offsetY = i - 2;
     // This makes sure the center plane starts with the first image
     // And the planes behind the main plane start with the last image
-    let imgNo = offsetY < 0 ? imageLength + offsetY : offsetY;
+    let imgNo = offsetY;
     planes[index] = {
       x: rightColX,
       y: rightColY + spaceY * offsetY,
@@ -75,7 +75,7 @@ function initPlanes(imageLength) {
 
     // In the left column we just want to make it slightly different from the main plane
     let imageOffset = offsetY - 1;
-    let imgNo = imageOffset < 0 ? imageLength + imageOffset : imageOffset;
+    let imgNo = imageOffset;
 
     planes[index] = {
       x: leftColX,

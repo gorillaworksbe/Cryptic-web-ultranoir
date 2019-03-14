@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { vertex, fragment } from "./shaders";
 
-function GLManager(container, images, onTextureLoad) {
+function GLManager(container, images) {
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 10000);
   camera.position.z = 1;
 
@@ -100,9 +100,6 @@ GLManager.prototype.drawPlane = function({
   const winToSceneHeightFactor = sceneSize / window.innerHeight;
 
   const sceneScroll = scroll * winToSceneHeightFactor;
-
-  const uvFactor = 0;
-  const imagePosition = 0;
 
   // console.log(this.textures[imgNo]);
   if (this.meshes[index]) {
