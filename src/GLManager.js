@@ -33,7 +33,7 @@ GLManager.prototype.onTextureLoad = function(imgNo) {
       // console.log("match");
       // update unifroms
       // render
-      this.updatePlaneTexture(index, imgNo);
+      this.onPlaneTextureUpdate(index, imgNo);
     }
   }
   this.render();
@@ -45,7 +45,7 @@ GLManager.prototype.getSceneSize = function() {
   const fovInRadians = (this.camera.fov * Math.PI) / 180;
   return 2 * Math.tan(fovInRadians / 2) * this.camera.position.z;
 };
-GLManager.prototype.updatePlaneTexture = function(index, imgNo) {
+GLManager.prototype.onPlaneTextureUpdate = function(index, imgNo) {
   console.log("imgno", imgNo);
   const texture = this.textures[imgNo];
   const material = this.meshes[index].material;
@@ -60,12 +60,10 @@ GLManager.prototype.updatePlaneTexture = function(index, imgNo) {
 
   const factor = { width: 1, height: 1 };
   if (rectRatio > imageRatio) {
-    console.log("h");
     factor.width = 1;
     factor.height = (1 / rectRatio) * imageRatio;
   } else {
-    console.log("w");
-    factor.width = rectRatio / imageRatio;
+    factor.width = (1 * rectRatio) / imageRatio;
     factor.height = 1;
   }
 
@@ -141,7 +139,7 @@ GLManager.prototype.drawPlane = function({
   geometry.userData = {
     scroll: sceneScroll,
     imgNo,
-    rect: { x, y, width, height }
+    rect: { width, height }
   };
 
   var material = new THREE.ShaderMaterial({
