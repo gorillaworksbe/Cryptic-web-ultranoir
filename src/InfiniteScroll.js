@@ -39,6 +39,7 @@ function InfiniteScroll(images = []) {
 
   this.planes = planes;
   this.spaceY = spaceY * getPsdToWinHeightFactor();
+  this.spaceYHalf = this.spaceY / 2;
 
   this.drawPlane = this.drawPlane.bind(this);
   this.isMouseDown = false;
@@ -52,12 +53,32 @@ function InfiniteScroll(images = []) {
     start: 0,
     sensitivity: 4,
     raw: 0,
-    delta: 0
+    delta: 0,
+    needsUpdate: false
   };
+
+  this.blackAndWhite = {
+    current: [1, 1, 0, 1, 1],
+    target: [1, 1, 0, 1, 1],
+    needsUpdate: false
+  };
+  this.activeImgNo = 0;
+  this.magnitude = {
+    target: 0,
+    current: 0,
+    needsUpdate: false
+  };
+
   this.updateRAF = null;
   this.update = this.update.bind(this);
+  this.updateMagnitude = this.updateMagnitude.bind(this);
   this.updateScroll = this.updateScroll.bind(this);
-  this.updator = [[this.scroll, this.updateScroll]];
+  this.updateBlackAndWhite = this.updateBlackAndWhite.bind(this);
+  this.updator = [
+    [this.scroll, this.updateScroll],
+    [this.magnitude, this.updateMagnitude],
+    [this.blackAndWhite, this.updateBlackAndWhite]
+  ];
 }
 InfiniteScroll.prototype.mount = function(container) {
   this.GL.mount(container);
@@ -78,6 +99,10 @@ InfiniteScroll.prototype.drawPlane = function(plane, index) {
   const y = plane.y * psdToWinHeightFactor;
   const height = plane.height * psdToWinHeightFactor;
 
+  let blackAndWhite = 1;
+  if (index < 4) {
+    blackAndWhite = this.blackAndWhite.current[index];
+  }
   this.GL.drawPlane({
     x,
     width,
@@ -86,7 +111,9 @@ InfiniteScroll.prototype.drawPlane = function(plane, index) {
     scroll: this.scroll.current * plane.direction,
     points: plane.points,
     imgNo: plane.imgNo,
-    index
+    index,
+    magnitude: this.magnitude.current,
+    blackAndWhite
   });
 };
 InfiniteScroll.prototype.render = function() {
@@ -99,27 +126,81 @@ InfiniteScroll.prototype.onMouseDown = function(scroll) {
   this.scroll.start = scroll;
   this.scroll.raw = scroll;
   this.isMouseDown = true;
+  this.magnitude.target = 0.75;
+  this.magnitude.needsUpdate = true;
+  this.scheduleUpdate();
 };
 InfiniteScroll.prototype.jumpBack = function() {
   this.scroll.start = this.scroll.raw;
   this.scroll.target = this.scroll.target - this.spaceY * this.scroll.delta;
   this.scroll.current = this.scroll.current - this.spaceY * this.scroll.delta;
+
+  const lastIndex = this.images.length - 1;
+  // If delta is -1 we want to loop back at the end
+  // If delta is 1 we want to loop back to 0
+  const edge = 1 === this.scroll.delta ? lastIndex : 0;
+  const edgeNext = 1 === this.scroll.delta ? 0 : lastIndex;
+  for (let i = 0; i < this.planes.length; i++) {
+    const imgNo = this.planes[i].imgNo;
+    this.planes[i].imgNo =
+      imgNo === edge ? edgeNext : imgNo + this.scroll.delta;
+  }
+  // Shift blacks and whites
+  if (this.scroll.delta === 1) {
+    for (let i = 0; i < 5; i++) {
+      var nextIndex = 4 === i ? 0 : i + 1;
+      this.blackAndWhite.target[i] = this.blackAndWhite.target[nextIndex];
+      this.blackAndWhite.current[i] = this.blackAndWhite.current[nextIndex];
+    }
+  } else {
+    for (let i = 4; -1 < i; i--) {
+      var prevIndex = 0 === i ? 4 : i - 1;
+      this.blackAndWhite.target[i] = this.blackAndWhite.target[prevIndex];
+      this.blackAndWhite.current[i] = this.blackAndWhite.current[prevIndex];
+    }
+  }
+  this.blackAndWhite.needsUpdate = true;
+  this.scheduleUpdate();
 };
 InfiniteScroll.prototype.onMouseMove = function(scroll) {
   if (!this.isMouseDown) return;
   // Just restart them
   this.scroll.delta = Math.sign(this.scroll.raw - scroll);
   this.scroll.raw = scroll;
-  this.scroll.target = -(scroll - this.scroll.start) * this.scroll.sensitivity;
 
   if (Math.abs(this.scroll.target) > this.spaceY) {
     this.jumpBack();
   }
+  this.scroll.target = -(scroll - this.scroll.start) * this.scroll.sensitivity;
+  this.noChange();
 
-  if (this.scroll.target !== this.scroll.current) {
-    this.scroll.needsUpdate = true;
-    this.scheduleUpdate();
-    //  cancelAnimationFrame(this.updateRAF);
+  this.scroll.needsUpdate = true;
+  this.scheduleUpdate();
+};
+InfiniteScroll.prototype.noChange = function(scroll) {
+  const thirdPlaneImgNo = this.planes[2].imgNo;
+  const isOverThreshold = Math.abs(this.scroll.target) > this.spaceYHalf;
+
+  // edge cases i think
+  const isBelowThreshold =
+    (0 < this.scroll.target && this.scroll.target < this.spaceYHalf) ||
+    (this.scroll.target < 0 && this.scroll.target > -this.spaceYHalf);
+  const hasSameImg = this.activeImgNo === thirdPlaneImgNo;
+  if ((isOverThreshold && hasSameImg) || (isBelowThreshold && !hasSameImg)) {
+    const lastIndex = this.images.length - 1;
+    // If delta is -1 we want to loop back at the end
+    // If delta is 1 we want to loop back to 0
+    const edge = 1 === this.scroll.delta ? lastIndex : 0;
+    const edgeNext = 1 === this.scroll.delta ? 0 : lastIndex;
+    const lastActiveImgNo = this.activeImgNo;
+    this.activeImgNo =
+      this.activeImgNo === edge
+        ? edgeNext
+        : this.activeImgNo + this.scroll.delta;
+
+    if (lastActiveImgNo !== this.activeImgNo) {
+      this.blackAndWhite.needsUpdate = true;
+    }
   }
 };
 InfiniteScroll.prototype.onMouseUp = function() {
@@ -150,10 +231,53 @@ InfiniteScroll.prototype.onMouseUp = function() {
     this.scroll.target = 0;
   }
   this.isMouseDown = false;
-  if (this.scroll.target !== this.scroll.current) {
-    this.scroll.needsUpdate = true;
+
+  this.scroll.needsUpdate = true;
+  this.magnitude.target = 0;
+  this.magnitude.needsUpdate = true;
+  this.noUp();
+  this.scheduleUpdate();
+};
+InfiniteScroll.prototype.noUp = function() {
+  const lastActiveImgNo = this.activeImgNo;
+  this.activeImgNo = this.planes[2].imgNo;
+  if (lastActiveImgNo !== this.activeImgNo) {
+    this.blackAndWhite.needsUpdate = true;
     this.scheduleUpdate();
-    //  cancelAnimationFrame(this.updateRAF);
+  }
+};
+InfiniteScroll.prototype.updateMagnitude = function() {
+  let magnitude =
+    this.magnitude.current +
+    (this.magnitude.target - this.magnitude.current) * 0.1;
+
+  if (Math.abs(this.magnitude.target - magnitude) < 0.001) {
+    this.magnitude.current = this.magnitude.target;
+    this.magnitude.needsUpdate = false;
+  } else {
+    this.magnitude.current = magnitude;
+  }
+};
+InfiniteScroll.prototype.updateBlackAndWhite = function() {
+  let done = 0;
+  for (let index = 0; index < 5; index++) {
+    //  Give colors ( 1 ) to the current ImgNo
+    this.blackAndWhite.target[index] =
+      this.planes[index].imgNo === this.activeImgNo ? 0 : 1;
+    // Reach target
+    let newCurrent =
+      this.blackAndWhite.current[index] +
+      0.1 *
+        (this.blackAndWhite.target[index] - this.blackAndWhite.current[index]);
+    if (Math.abs(this.blackAndWhite.target[index] - newCurrent) < 0.001) {
+      this.blackAndWhite.current[index] = this.blackAndWhite.target[index];
+      done += 1;
+    } else {
+      this.blackAndWhite.current[index] = newCurrent;
+    }
+  }
+  if (done === 5) {
+    this.blackAndWhite.needsUpdate = false;
   }
 };
 InfiniteScroll.prototype.updateScroll = function() {
@@ -176,22 +300,18 @@ InfiniteScroll.prototype.scheduleUpdate = function() {
 
 InfiniteScroll.prototype.update = function() {
   let didUpdate = false;
-  // for (var i = 0; i < this.updator.length; i++) {
-  //   if (this.updator[i][0].needsUpdate) {
-  //     didUpdate = true;
-  //     // Run update function
-  //     this.updator[i][1]();
-  //   }
-  // }
 
-  if (this.scroll.needsUpdate) {
-    didUpdate = true;
-    this.updateScroll();
+  for (var i = 0; i < this.updator.length; i++) {
+    if (this.updator[i][0].needsUpdate) {
+      didUpdate = true;
+      // Run update function
+      this.updator[i][1]();
+    }
   }
-  this.draw();
-  this.render();
 
   if (didUpdate) {
+    this.draw();
+    this.render();
     this.updateRAF = requestAnimationFrame(this.update);
   } else {
     cancelAnimationFrame(this.updateRAF);

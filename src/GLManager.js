@@ -3,7 +3,7 @@ import { vertex, fragment } from "./shaders";
 
 function GLManager(container, images) {
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 10000);
-  camera.position.z = 1;
+  camera.position.z = 5;
 
   const scene = new THREE.Scene();
   camera.lookAt = scene.position;
@@ -46,7 +46,6 @@ GLManager.prototype.getSceneSize = function() {
   return 2 * Math.tan(fovInRadians / 2) * this.camera.position.z;
 };
 GLManager.prototype.onPlaneTextureUpdate = function(index, imgNo) {
-  console.log("imgno", imgNo);
   const texture = this.textures[imgNo];
   const material = this.meshes[index].material;
   // const uniforms = {
@@ -73,14 +72,30 @@ GLManager.prototype.onPlaneTextureUpdate = function(index, imgNo) {
   );
   material.uniforms.u_texture.value = this.textures[imgNo];
 };
-GLManager.prototype.updatePlane = function({ index, scroll, imgNo }) {
-  if (scroll && scroll !== this.meshes[index].geometry.userData.scroll) {
+GLManager.prototype.updatePlane = function({
+  index,
+  scroll,
+  imgNo,
+  magnitude,
+  blackAndWhite
+}) {
+  if (
+    scroll != null &&
+    scroll !== this.meshes[index].geometry.userData.scroll
+  ) {
     const scrollDifference =
       scroll - this.meshes[index].geometry.userData.scroll;
     this.meshes[index].geometry.userData.scroll = scroll;
     this.meshes[index].geometry.translate(0, scrollDifference, 0);
     this.meshes[index].geometry.computeBoundingSphere();
   }
+  if (imgNo != null && imgNo !== this.meshes[index].geometry.userData.imgNo) {
+    this.meshes[index].geometry.userData.imgNo = imgNo;
+    this.onPlaneTextureUpdate(index, imgNo);
+  }
+
+  this.meshes[index].material.uniforms.u_progress.value = magnitude;
+  this.meshes[index].material.uniforms.u_blackAndWhite.value = blackAndWhite;
 };
 GLManager.prototype.drawPlane = function({
   x,
@@ -90,7 +105,9 @@ GLManager.prototype.drawPlane = function({
   points,
   index,
   scroll,
-  imgNo
+  imgNo,
+  blackAndWhite,
+  magnitude
 }) {
   const sceneSize = this.getSceneSize();
 
@@ -103,7 +120,10 @@ GLManager.prototype.drawPlane = function({
   if (this.meshes[index]) {
     this.updatePlane({
       scroll: sceneScroll,
-      index
+      index,
+      imgNo,
+      blackAndWhite,
+      magnitude
     });
     return;
   }
@@ -145,10 +165,17 @@ GLManager.prototype.drawPlane = function({
   var material = new THREE.ShaderMaterial({
     uniforms: {
       u_texture: { type: "t", value: this.textures[imgNo] },
-      u_textureFactor: { type: "v2", value: new THREE.Vector2(1, 1) }
+      u_textureFactor: { type: "v2", value: new THREE.Vector2(1, 1) },
+      u_maxDistance: { type: "f", value: sceneSize },
+      u_magnitude: { type: "f", value: 1.1 },
+      u_progress: { type: "f", value: magnitude },
+      u_blackAndWhite: { type: "f", value: blackAndWhite },
+      u_opacityColor: { type: "f", value: 0.1 },
+      u_opacity: { type: "f", value: 1 }
     },
     fragmentShader: fragment,
-    vertexShader: vertex
+    vertexShader: vertex,
+    side: THREE.DoubleSide
   });
   const mesh = new THREE.Mesh(geometry, material);
   this.scene.add(mesh);
